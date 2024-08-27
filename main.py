@@ -1,9 +1,12 @@
+# fastapi_app.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from starlette.responses import JSONResponse
 import pandas as pd
 import os
 import logging
 import numpy as np
+from pdf_maker import generate_pdf  # Import the PDF generation logic
 
 app = FastAPI()
 
@@ -13,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 # Define the upload folder
 UPLOAD_FOLDER = 'uploads'
+PDF_FOLDER = 'pdfs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PDF_FOLDER, exist_ok=True)
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
@@ -63,10 +68,21 @@ async def upload(file: UploadFile = File(...)):
         data = df.to_dict(orient='records')
         sanitized_data = sanitize_data(data)
 
-        return {"message": "File processed successfully", "data": sanitized_data}
+        # Generate PDF
+        pdf_filename = os.path.join(PDF_FOLDER, file.filename.rsplit('.', 1)[0] + '.pdf')
+        generate_pdf(sanitized_data, pdf_filename)
+
+        return {"message": "File processed successfully", "data": sanitized_data, "pdf_url": f"/download/{file.filename.rsplit('.', 1)[0]}.pdf"}
 
     except Exception as e:
         logger.error(f"Error processing file: {str(e)}")
         return JSONResponse(content={"message": f"There was an error uploading the file: {str(e)}"}, status_code=500)
     finally:
         await file.close()
+
+@app.get("/download/{pdf_filename}")
+async def download_pdf(pdf_filename: str):
+    pdf_path = os.path.join(PDF_FOLDER, pdf_filename)
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="PDF not found")
+    return FileResponse(path=pdf_path, media_type='application/pdf', filename=pdf_filename)
