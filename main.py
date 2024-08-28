@@ -1,7 +1,9 @@
-# fastapi_app.py
+# FastAPI main file
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from starlette.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
 import logging
@@ -10,6 +12,20 @@ from pdf_maker import generate_pdf  # Import the PDF generation logic
 
 app = FastAPI()
 
+# Configure CORS
+origins = [
+    "http://localhost:5000",  # Flask server URL
+    "http://127.0.0.1:5000"   # Another form of localhost
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,8 +33,10 @@ logger = logging.getLogger(__name__)
 # Define the upload folder
 UPLOAD_FOLDER = 'uploads'
 PDF_FOLDER = 'pdfs'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PDF_FOLDER, exist_ok=True)
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+if not os.path.exists(PDF_FOLDER):
+    os.makedirs(PDF_FOLDER)
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
@@ -35,54 +53,45 @@ def sanitize_data(data):
             return str(value)
         return value
 
-    return [{k: convert_value(v) for k, v in row.items()} for row in data]
+    return [{key: convert_value(value) for key, value in row.items()} for row in data]
 
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...)):
+    logger.info(f"Received file: {file.filename}")
+
+    # Check if the file has a valid extension
     if not allowed_file(file.filename):
-        logger.error(f"File type not allowed: {file.filename}")
-        raise HTTPException(status_code=400, detail="Invalid file type. Only CSV and Excel files are allowed.")
+        raise HTTPException(status_code=400, detail="Invalid file format. Only CSV, XLSX, and XLS are allowed.")
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
 
     try:
-        # Stream and save the file
-        with open(file_path, 'wb') as f:
-            while True:
-                chunk = await file.read(1024 * 1024)  # Read in 1MB chunks
-                if not chunk:
-                    break
-                f.write(chunk)
-
-        file_extension = file.filename.rsplit('.', 1)[1].lower()
-
-        # Process the file
-        if file_extension in {'csv'}:
+        # Process the file with pandas
+        if file.filename.endswith('.csv'):
             df = pd.read_csv(file_path)
-        elif file_extension in {'xlsx', 'xls'}:
-            df = pd.read_excel(file_path)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file type. Only CSV and Excel files are allowed.")
+        elif file.filename.endswith('.xlsx'):
+            df = pd.read_excel(file_path, engine='openpyxl')  # Specify the engine for .xlsx files
+        elif file.filename.endswith('.xls'):
+            df = pd.read_excel(file_path, engine='xlrd')  # Specify the engine for .xls files
 
-        # Convert to dictionary format and sanitize data
-        data = df.to_dict(orient='records')
-        sanitized_data = sanitize_data(data)
+        # Generate sanitized data for JSON response
+        data = sanitize_data(df.to_dict(orient='records'))
 
-        # Generate PDF
-        pdf_filename = os.path.join(PDF_FOLDER, file.filename.rsplit('.', 1)[0] + '.pdf')
-        generate_pdf(sanitized_data, pdf_filename)
+        # Generate the PDF
+        pdf_path = generate_pdf(df, file.filename)  # Ensure it returns a PDF path
+        pdf_url = f"/download/{os.path.basename(pdf_path)}"
 
-        return {"message": "File processed successfully", "data": sanitized_data, "pdf_url": f"/download/{file.filename.rsplit('.', 1)[0]}.pdf"}
-
+        return JSONResponse(content={"message": "File processed successfully", "data": data, "pdf_url": pdf_url})
     except Exception as e:
-        logger.error(f"Error processing file: {str(e)}")
-        return JSONResponse(content={"message": f"There was an error uploading the file: {str(e)}"}, status_code=500)
-    finally:
-        await file.close()
+        logger.error(f"Error processing file: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while processing the file.")
 
-@app.get("/download/{pdf_filename}")
-async def download_pdf(pdf_filename: str):
-    pdf_path = os.path.join(PDF_FOLDER, pdf_filename)
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=404, detail="PDF not found")
-    return FileResponse(path=pdf_path, media_type='application/pdf', filename=pdf_filename)
+@app.get("/download/{filename}")
+async def download_pdf(filename: str):
+    file_path = os.path.join(PDF_FOLDER, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found.")
+    
+    return FileResponse(file_path, media_type='application/pdf', filename=filename)
