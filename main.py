@@ -7,12 +7,13 @@ import pandas as pd
 import os
 import logging
 import numpy as np
-from pdf_maker import generate_pdf  # Import the PDF generation logic
-from AI_instruments import ai_main
-from test.one_agent_test import AI_generation_plots_summary
-from test.final_sum import final_gen
+from additional_functions.pdf_maker import generate_pdf  # Import the PDF generation logic
+from additional_functions.preprocess_data import preprocess_data
+#from AI_instruments import ai_main
+from AI_instruments.one_agent_main import AI_generation_plots_summary
+from AI_instruments.final_sum import final_gen
 from pathlib import Path
-import new_func_test
+
 
 app = FastAPI()
 
@@ -31,7 +32,7 @@ app.add_middleware(
 )
 
 # Configure logging to write to a file
-log_file_path = "app.log"
+log_file_path = "preprocess_log.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -43,8 +44,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Define the upload and PDF folders
-UPLOAD_FOLDER = 'uploads'
-PDF_FOLDER = 'pdfs'
+UPLOAD_FOLDER = 'src/uploads'
+PDF_FOLDER = 'src/pdfs'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 if not os.path.exists(PDF_FOLDER):
@@ -61,8 +62,8 @@ def convert_excel_to_csv(excel_file_path):
         raise ValueError(f"Error converting Excel to CSV: {str(e)}")
 
 def clean_directories():
-    plots_folder = 'plots'
-    summary_folder = 'summary'
+    plots_folder = 'src/plots'
+    summary_folder = 'src/summary'
     
     # Remove all files in the 'plots' folder
     if os.path.exists(plots_folder):
@@ -86,7 +87,7 @@ def clean_directories():
             except Exception as e:
                 logger.error(f"Error deleting file {file_path}: {e}")
 
-@app.post("/upload")
+@app.post("/src/upload")
 async def upload_file(file: UploadFile = File(...)):
     # Ensure folders exist
     if not os.path.exists(UPLOAD_FOLDER):
@@ -123,16 +124,16 @@ async def upload_file(file: UploadFile = File(...)):
     
     try:
         # Generate plots and summarize data
-        path = Path(file_path)  #example "uploads\\ideal_short.csv"
+        path = Path(file_path)  #example "src/uploads\\ideal_short.csv"
         filename = path.name
-        action = new_func_test.preprocess_data(path)
+        action = preprocess_data(path)
         logger.info(f"Generating plots for file: {filename}")
         
         cleaned_dataset_name = "cleaned_data.csv"
         AI_generation_plots_summary(cleaned_dataset_name)
         logger.info("Plot generation completed")
 
-        final_gen(f"uploads/{filename}")  # Ensure this function generates a summary
+        final_gen(f"src/uploads/{filename}")  # Ensure this function generates a summary
         logger.info("Data summary generated")
 
         # Generate the PDF

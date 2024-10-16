@@ -6,11 +6,11 @@ import markdown2
 logger = logging.getLogger(__name__)
 
 # Define folder paths
-UPLOAD_FOLDER = 'uploads'
-PDF_FOLDER = 'pdfs'
-PLOTS_FOLDER = 'plots'
-SUMMARY_FOLDER = 'summary'
-LOGO_PATH = 'icon.ico'
+UPLOAD_FOLDER = 'src/uploads'
+PDF_FOLDER = 'src/pdfs'
+PLOTS_FOLDER = 'src/plots'
+SUMMARY_FOLDER = 'src/summary'
+LOGO_PATH = 'src/icon.ico'
 
 for folder in [UPLOAD_FOLDER, PDF_FOLDER, PLOTS_FOLDER, SUMMARY_FOLDER]:
     if not os.path.exists(folder):
@@ -100,8 +100,8 @@ def generate_pdf(original_filename):
     for i in range(1, 6):
         plot_image_path = os.path.join(PLOTS_FOLDER, f"chart_{i}.png")
         text_file_path = os.path.join(SUMMARY_FOLDER, f"sum_{i}.txt")
-        extra_plot_path = os.path.join('extra_plots.png')
-        extra_text_path = os.path.join('extra_sum.txt')
+        extra_plot_path = os.path.join('src/extra_plots.png')
+        extra_text_path = os.path.join('src/extra_sum.txt')
 
         try:
             image_width = 180
@@ -135,8 +135,8 @@ def generate_pdf(original_filename):
             pdf.ln(25)  # Add line break
 
     pdf.add_page()  # Ensure there's a new page for the final section
-    primary_file_path = "final_gen.txt"
-    fallback_file_path = "final.txt"
+    primary_file_path = "src/final_gen.txt"
+    fallback_file_path = "src/extra_final.txt"
     if os.path.exists(primary_file_path):
         add_markdown_to_pdf(pdf, primary_file_path)
     else:
