@@ -65,6 +65,7 @@ def AI_generation_plots_summary(file):
                         Each task should include:
                         -Informative visualizations functions that show dependencies between columns.
                         -Functional code for each visualization.
+                        - use different plot style, colors 
                         Ensure all tasks are executed using a try-except block to handle errors gracefully.
                         
                         Requirements for every function you should use!:
@@ -78,6 +79,8 @@ def AI_generation_plots_summary(file):
                         -One visualization.
                         -A summary explanation.
                         -do not use different written functions like load dataset
+                        -different color style, like Light24. (lib import plotly.express as px)
+                        Donut chart prefer than standard pie-chart
                         Example good code for one function:
                         def task_1_visualization():
                             df = pd.read_csv('{csv_folder}/{file_name}')
@@ -94,6 +97,7 @@ def AI_generation_plots_summary(file):
                                     os.makedirs('src/summary')
                                 with open('src/summary/sum_1.txt', 'w') as f:
                                     f.write(summary)
+                        
                         Group smaller column values, relative to the average, into a single category called “Other” to enhance visual clarity
                         Grouping Example:
                         main_data = product_data[product_data['percentage'] >= threshold]

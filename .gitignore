@@ -1,6 +1,11 @@
 .env
 .conda
 .png
+preprocess_log.log
+Summary.txt
+final_gen.txt
+temp.py
+code_test.py
 icon.ico
 /test_env
 /dont_need

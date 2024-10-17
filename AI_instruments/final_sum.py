@@ -16,10 +16,11 @@ def final_agent_gen(file_path):
     )
     result = agent_executor.invoke(
         {
-            "input": """Analyze my dataset and give me an answer in 3 detailed points:
-1) General data analysis
-2) Statistical information - not very detailed, focus on useful information for business.
-3) Detailed feedback on the data with conclusions that reveal the data and provide useful business insights that everyone can understand."""
+            "input": """Analyze my dataset according to the following rules:
+- 25 percent of the answer should be devoted to statistical analysis. giving basic mathematical insights from the data is useful for business!
+- 75 percent of the answer should be a detailed answer on data analysis - written in a way that is understandable for an ordinary user with an emphasis on business data analytics. For example, the difference in product sales in different periods of time. The answer should be as detailed as possible.
+- It should be a voluminous answer disclosing the data to the maximum!
+- answer should be only in txt format - not markdown formatting"""
         }
     )
     
