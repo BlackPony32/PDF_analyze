@@ -25,7 +25,7 @@ def preprocess_data(file_path):
 
     try:
         try:
-            df = pd.read_csv(file_path)  # First attempt with default encoding
+            df = pd.read_csv(file_path, encoding= 'utf-8')  # First attempt with default encoding
         except UnicodeDecodeError:
             df = pd.read_csv(file_path, encoding='ISO-8859-1')  # Retry with Latin-1 encoding
         actions_performed.append("Loaded CSV file")
@@ -35,6 +35,15 @@ def preprocess_data(file_path):
         
         if columns_to_drop:
             df.drop(columns=columns_to_drop, inplace=True)
+            try:
+                if "CHAIN" in df.columns:
+                    df.drop(columns=["CHAIN"], inplace=True)
+                    actions_performed.append("CHAIN column was dropped.")
+                else:
+                    actions_performed.append("There is no CHAIN column.")
+
+            except ValueError:
+                actions_performed.append("There is no CHAIN column")
             actions_performed.append(f"Dropped columns with >= 75% missing or invalid values: {columns_to_drop}")
         else:
             actions_performed.append("No columns dropped due to missing or invalid values")

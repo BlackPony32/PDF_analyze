@@ -28,6 +28,7 @@ def extract_and_execute_code(file_path):
         # For each extracted code block, execute it
         for i, code_block in enumerate(code_blocks, start=1):
             print(f"Executing code block {i}...\n")
+            df = pd.read_csv('src/uploads/cleaned_data.csv')
             exec(code_block)
             print(f"Code block {i} executed successfully!\n")
     except Exception as e:
