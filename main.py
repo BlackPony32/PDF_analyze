@@ -13,7 +13,7 @@ from additional_functions.preprocess_data import preprocess_data
 from AI_instruments.one_agent_main import AI_generation_plots_summary
 from AI_instruments.final_sum import final_gen
 from pathlib import Path
-
+from additional_functions.dataset_main_info import extract_main_info
 
 app = FastAPI()
 
@@ -89,13 +89,14 @@ def clean_directories():
 
 @app.post("/src/upload")
 async def upload_file(file: UploadFile = File(...)):
-    # Ensure folders exist
+    # Check if the file has a valid extension
+    UPLOAD_FOLDER = 'src/uploads'
+    PDF_FOLDER = 'src/pdfs'
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
     if not os.path.exists(PDF_FOLDER):
         os.makedirs(PDF_FOLDER)
-
-    # Check if the file has a valid extension
+        
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         logger.error("Invalid file format uploaded.")
         raise HTTPException(status_code=400, detail="Invalid file format. Only CSV, XLSX, and XLS are allowed.")
@@ -106,17 +107,13 @@ async def upload_file(file: UploadFile = File(...)):
         logger.info(f"Uploaded file {file.filename} to {UPLOAD_FOLDER}")
 
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file_path, low_memory=False)
-        elif file.filename.endswith('.xlsx'):
+        if file.filename.endswith('.xlsx'):
             excel_file_path = f"{UPLOAD_FOLDER}/{file.filename}"
             file_path = convert_excel_to_csv(excel_file_path)
-            df = pd.read_csv(file_path, low_memory=False)
             logger.info(f"Converted Excel to CSV and loaded file: {file.filename}")
         elif file.filename.endswith('.xls'):
             excel_file_path = f"{UPLOAD_FOLDER}/{file.filename}"
             file_path = convert_excel_to_csv(excel_file_path)
-            df = pd.read_csv(file_path, low_memory=False)
             logger.info(f"Converted Excel to CSV and loaded file: {file.filename}")
     except Exception as e:
         logger.error(f"Error processing file: {e}")
@@ -130,11 +127,22 @@ async def upload_file(file: UploadFile = File(...)):
         logger.info(f"Generating plots for file: {filename}")
         
         cleaned_dataset_name = "cleaned_data.csv"
-        AI_generation_plots_summary(cleaned_dataset_name)
-        logger.info("Plot generation completed")
+        
+        try:
+            cleaned_dataset_name = "src/uploads/cleaned_data.csv"
+            _df = pd.read_csv(cleaned_dataset_name, low_memory=False)
+            data_dict = extract_main_info(_df)
+        except Exception as e:
+            logger.error(f'Error in data processing:{e}')
+        try:
+            
+            AI_generation_plots_summary(data_dict)
+            logger.info("Plot generation completed")
+            final_gen(f"src/uploads/{filename}")
+            logger.info("Data summary generated")
+        except Exception as e:
+            logger.error(f'Error in plots or conclusion creating:{e}')
 
-        final_gen(f"src/uploads/{filename}")  # Ensure this function generates a summary
-        logger.info("Data summary generated")
 
         # Generate the PDF
         pdf_path = generate_pdf(filename)  # Ensure it returns a PDF path

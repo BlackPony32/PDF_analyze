@@ -16,6 +16,7 @@ for folder in [UPLOAD_FOLDER, PDF_FOLDER, PLOTS_FOLDER, SUMMARY_FOLDER]:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
+#_____start of trash functions_ probably deleet________________________________
 def process_markdown_to_pdf(pdf, markdown_text):
     """Convert Markdown to PDF with basic formatting."""
     lines = markdown_text.split('\n')
@@ -65,10 +66,25 @@ def add_markdown_to_pdf(pdf, file_path):
         with open(file_path, 'r') as file:
             markdown_text = file.read()
 
-        process_markdown_to_pdf(pdf, markdown_text)
+        pdf.multi_cell(0, 10, markdown_text)
+        #process_markdown_to_pdf(pdf, markdown_text)
     except Exception as e:
         logger.info(f"Error reading {file_path}: {e}")
 
+#_____end of trash functions_ probably deleet________________________________
+from fpdf.enums import XPos, YPos
+def find_bold(pdf, file_path):
+    with open(file_path, 'r') as file:
+        text = file.read()
+
+    # Use regex to find text between ** symbols
+    #matches = re.findall(r'\*\*(.*?)\*\*', line)
+    pdf.set_font('helvetica', size=12)  # Set bold font
+    lines  = text.split('\n')
+    for line in lines:
+
+            pdf.multi_cell(0, 10, line, markdown=True,new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            
 def generate_pdf(original_filename):
     pdf_filename = f"{os.path.splitext(original_filename)[0]}.pdf"
     pdf_path = os.path.join(PDF_FOLDER, pdf_filename)
@@ -83,7 +99,7 @@ def generate_pdf(original_filename):
         pdf.image(LOGO_PATH, x=9.5, y=20, w=5)  # Smaller logo size (adjusted width)
 
     pdf.set_xy(15, 15)
-    pdf.set_font("Arial", 'B', 16)
+    pdf.set_font("helvetica", 'B', 16)
     pdf.set_text_color(255, 255, 255)  # White text color for contrast
     pdf.cell(100, 15, txt="SimplyDepo", ln=False, align='L')
 
@@ -91,7 +107,7 @@ def generate_pdf(original_filename):
 
     # Add main title
     pdf.set_xy(100, 15)
-    pdf.set_font("Arial", 'B', 16)
+    pdf.set_font("helvetica", 'B', 16)
     pdf.set_text_color(71, 160, 109)  # Reset to black text
     pdf.cell(100, 15, txt=f"User Data Report: {original_filename}", ln=True, align='C')
 
@@ -128,7 +144,7 @@ def generate_pdf(original_filename):
 
             pdf.image(LOGO_PATH, x=9.5, y=20, w=5)
             pdf.set_xy(15, 15)  # Position next to the logo
-            pdf.set_font("Arial", 'B', 16)
+            pdf.set_font("helvetica", 'B', 16)
             pdf.set_text_color(255, 255, 255)  # White text color for contrast
             pdf.cell(100, 15, txt="SimplyDepo", ln=False, align='L')
 
@@ -138,9 +154,9 @@ def generate_pdf(original_filename):
     primary_file_path = "src/final_gen.txt"
     fallback_file_path = "src/extra_final.txt"
     if os.path.exists(primary_file_path):
-        add_markdown_to_pdf(pdf, primary_file_path)
+        find_bold(pdf, primary_file_path)
     else:
-        add_plain_text_to_pdf(pdf, fallback_file_path)
+        find_bold(pdf, fallback_file_path)
 
     pdf.output(pdf_path)
     logger.info(f"PDF generated: {pdf_path}")
